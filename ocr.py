@@ -18,7 +18,7 @@ MAX_RETRIES = 3
 RETRY_DELAY = 5  # seconds
 
 # API Configuration
-RUNPOD_ENDPOINT = "https://tpojbsbaej220w-8000.proxy.runpod.net/generate"
+RUNPOD_ENDPOINT = "https://j2f951zim1kgdh-8000.proxy.runpod.net/generate"
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
@@ -181,7 +181,7 @@ def consolidate_group_results(model_output: dict, original_variables: List[Dict]
             elif len(checked_options) > 1:
                 warning_msg = f"Conflit pour '{var_name}': Plusieurs options cochées détectées ({', '.join(checked_options)})"
                 warnings.append(warning_msg)
-                final_results[var_name] = f"Conflit: {', '.join(checked_options)}"
+                final_results[var_name] = ', '.join(checked_options)
             else:  # len(checked_options) == 0
                 final_results[var_name] = "Non renseigné"
         else:
@@ -189,6 +189,116 @@ def consolidate_group_results(model_output: dict, original_variables: List[Dict]
             final_results[var_name] = model_output_lower.get(var_name.lower(), "Non renseigné")
 
     return final_results
+
+
+def call_vision_model_for_variable_detection(image_b64: str) -> Optional[str]:
+    """
+    Calls the vision model with a prompt that asks for variable detection.
+    """
+    prompt = """Tu es un expert en analyse de formulaires.
+Analyse l'image fournie et identifie TOUS les champs de formulaire, les étiquettes de données, et les questions qui pourraient être des variables à extraire.
+
+**Instructions :**
+1.  Liste les noms de ces variables dans l'ordre où ils apparaissent sur le document, de haut en bas.
+2.  Sois concis mais descriptif. Par exemple, "Date de naissance" est mieux que "Date".
+3.  Ignore les instructions, les titres généraux du document ou les paragraphes de texte. Concentre-toi sur les paires clé-valeur.
+
+**TACHE FINALE :**
+Ta réponse DOIT être un unique objet JSON valide.
+L'objet JSON doit avoir une seule clé nommée "variables".
+La valeur de "variables" doit être une liste de chaînes de caractères, où chaque chaîne est un nom de variable détecté.
+
+**Exemple de format de réponse :**
+```json
+{
+  "variables": [
+    "Nom du patient",
+    "Prénom du patient",
+    "Date de naissance",
+    "Sexe",
+    "Symptôme principal",
+    "Date d'apparition des symptômes",
+    "Antécédents médicaux"
+  ]
+}
+```
+
+Ne retourne RIEN d'autre que l'objet JSON. Pas de texte explicatif, pas de markdown, juste le JSON.
+"""
+
+    payload = {
+        "prompt": prompt,
+        "image_base64": image_b64,
+        "max_tokens": 4096,
+        "temperature": 0.0,
+    }
+    for attempt in range(MAX_RETRIES):
+        try:
+            response = requests.post(RUNPOD_ENDPOINT, json=payload, timeout=300)
+            response.raise_for_status()
+            data = response.json()
+            text = data.get("text") or data.get("output", "")
+            print(f"\n📤 Réponse brute (détection de variables) du modèle de vision RunPod :\n{text}\n")
+            return text.strip()
+        except Exception as e:
+            print(f"⚠️ Tentative d'appel au modèle de vision {attempt + 1} échouée : {str(e)}")
+            if attempt == MAX_RETRIES - 1:
+                return f"ERROR: {str(e)}"
+            sleep(RETRY_DELAY)
+    return "ERROR: L'appel au modèle de vision a échoué après plusieurs tentatives."
+
+
+def detect_variables_from_image_folder(folder_path: str) -> Dict:
+    """
+    Analyzes the images in a folder to detect potential variables.
+    """
+    results_wrapper = {
+        "variables": [], "errors": [], "warnings": []
+    }
+    print(f"\n📂 Lancement de la détection de variables pour le dossier : {folder_path}")
+
+    try:
+        images = sorted([f for f in os.listdir(folder_path) if f.lower().endswith(('.png', '.jpg', '.jpeg'))],
+                        key=lambda x: [int(c) if c.isdigit() else c for c in re.split(r'([0-9]+)', x)])
+        if not images:
+            raise FileNotFoundError("Aucune image trouvée dans le dossier.")
+
+        full_image_paths = [os.path.join(folder_path, img) for img in images]
+
+        print("⏳ Fusion des images pour la détection...")
+        merged_path = os.path.join(tempfile.gettempdir(), "merged_detection.png")
+        merge_images_vertically(full_image_paths, merged_path)
+
+        if not validate_image_file(merged_path):
+            raise ValueError(f"L'image fusionnée est invalide: {merged_path}")
+
+        image_data = preprocess_image(merged_path)
+        if not image_data:
+            raise ValueError("Échec du prétraitement de l'image.")
+
+        encoded_image = base64.b64encode(image_data).decode("utf-8")
+
+        print("🤖 Appel du modèle de vision pour la détection de variables...")
+        raw_response = call_vision_model_for_variable_detection(encoded_image)
+
+        if not raw_response or raw_response.startswith("ERROR"):
+            raise ValueError(f"Erreur du modèle de vision : {raw_response}")
+
+        print("✅ Réponse reçue, parsing du JSON...")
+        parsed_data = parse_json_response(raw_response)
+        if not parsed_data or "variables" not in parsed_data or not isinstance(parsed_data["variables"], list):
+            raise ValueError("La réponse JSON du modèle est mal formée ou ne contient pas de liste de variables.")
+
+        detected_vars = parsed_data["variables"]
+        print(f"🔎 Variables détectées : {detected_vars}")
+        results_wrapper["variables"] = detected_vars
+
+    except Exception as e:
+        results_wrapper["errors"].append(str(e))
+        print(f"❌ Erreur générale lors de la détection : {str(e)}")
+
+    print("\n✅ Détection de variables terminée.\n")
+    return results_wrapper
 
 
 def extract_data_from_image_folder(folder_path: str, variables: List[Dict]) -> Dict:
