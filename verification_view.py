@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import (
     QLabel, QVBoxLayout, QPushButton, QScrollArea,
     QSplitter, QFrame, QSizePolicy, QMessageBox
 )
-from PyQt5.QtGui import QPixmap, QColor, QFont
+from PyQt5.QtGui import QPixmap, QColor, QFont, QPalette
 from PyQt5.QtCore import Qt, QRect, QPoint
 import os
 import re
@@ -22,29 +22,85 @@ class VerificationView(QWidget):
         self.initUI()
 
     def initUI(self):
+        # Apply modern styling
+        self.setStyleSheet("""
+            QWidget {
+                background-color: #f8f9fa;
+                font-family: 'Segoe UI', Arial, sans-serif;
+            }
+            QFrame {
+                background-color: white;
+                border: 1px solid #dee2e6;
+                border-radius: 8px;
+            }
+            QPushButton {
+                padding: 10px 16px;
+                border: none;
+                border-radius: 6px;
+                font-weight: 500;
+                font-size: 11px;
+                min-width: 100px;
+            }
+            QPushButton:hover {
+                transform: translateY(-1px);
+            }
+            QTableWidget {
+                background-color: white;
+                border: 1px solid #dee2e6;
+                border-radius: 8px;
+                gridline-color: #f1f3f4;
+                font-size: 11px;
+            }
+            QHeaderView::section {
+                background-color: #f8f9fa;
+                padding: 10px;
+                border: 1px solid #dee2e6;
+                font-weight: bold;
+                color: #495057;
+            }
+            QTableWidget::item {
+                padding: 8px;
+                border-bottom: 1px solid #f1f3f4;
+            }
+            QTableWidget::item:selected {
+                background-color: #e3f2fd;
+                color: #1976d2;
+            }
+            QScrollArea {
+                border: 1px solid #dee2e6;
+                border-radius: 8px;
+                background-color: #f8f9fa;
+            }
+            QLabel {
+                color: #495057;
+            }
+        """)
+        
         # Main splitter for resizable panels
         self.main_splitter = QSplitter(Qt.Horizontal)
-        self.main_splitter.setStyleSheet("QSplitter::handle { background: #ddd; }")
+        self.main_splitter.setStyleSheet("QSplitter::handle { background: #dee2e6; width: 2px; }")
 
         # Left panel - Table
         self.table_panel = QFrame()
-        self.table_panel.setFrameShape(QFrame.StyledPanel)
         table_layout = QVBoxLayout(self.table_panel)
-        table_layout.setContentsMargins(5, 5, 5, 5)
-        table_layout.setSpacing(10)
+        table_layout.setContentsMargins(15, 15, 15, 15)
+        table_layout.setSpacing(15)
+
+        # Title
+        title = QLabel("Vérification des Données Extraites")
+        title.setFont(QFont("Segoe UI", 14, QFont.Bold))
+        title.setStyleSheet("color: #495057; margin-bottom: 10px;")
+        table_layout.addWidget(title)
 
         # Control button
-        self.toggle_btn = QPushButton("Show Visualization")
+        self.toggle_btn = QPushButton("📋 Afficher la Visualisation")
         self.toggle_btn.setStyleSheet("""
             QPushButton {
-                background-color: #2196F3;
+                background-color: #007bff;
                 color: white;
-                border: none;
-                padding: 8px 15px;
-                border-radius: 4px;
             }
             QPushButton:hover {
-                background-color: #0b7dda;
+                background-color: #0056b3;
             }
         """)
         self.toggle_btn.clicked.connect(self.toggle_viewer)
@@ -52,56 +108,39 @@ class VerificationView(QWidget):
 
         # Data table
         self.table = QTableWidget()
-        self.table.setStyleSheet("""
-            QTableWidget {
-                background-color: white;
-                border: 1px solid #ddd;
-                gridline-color: #eee;
-            }
-            QHeaderView::section {
-                background-color: #f0f0f0;
-                padding: 5px;
-                border: 1px solid #ddd;
-            }
-            QTableWidget::item {
-                padding: 5px;
-            }
-            QTableWidget::item:selected {
-                background-color: #e1f0fa;
-                color: #0066cc;
-            }
-        """)
         self.table.setEditTriggers(QTableWidget.AllEditTriggers)
         table_layout.addWidget(self.table)
 
         # Right panel - Image Viewer
         self.viewer_panel = QFrame()
-        self.viewer_panel.setFrameShape(QFrame.StyledPanel)
         viewer_layout = QVBoxLayout(self.viewer_panel)
-        viewer_layout.setContentsMargins(5, 5, 5, 5)
-        viewer_layout.setSpacing(10)
+        viewer_layout.setContentsMargins(15, 15, 15, 15)
+        viewer_layout.setSpacing(15)
+
+        # Viewer title
+        viewer_title = QLabel("Visualisation des Documents")
+        viewer_title.setFont(QFont("Segoe UI", 12, QFont.Bold))
+        viewer_title.setStyleSheet("color: #495057;")
+        viewer_layout.addWidget(viewer_title)
 
         # Viewer controls
         controls = QHBoxLayout()
-        controls.setSpacing(10)
+        controls.setSpacing(15)
 
-        self.prev_btn = QPushButton("◀ Previous")
-        self.next_btn = QPushButton("Next ▶")
+        self.prev_btn = QPushButton("◀ Précédent")
+        self.next_btn = QPushButton("Suivant ▶")
         self.page_label = QLabel("Page: -/-")
-        self.zoom_in_btn = QPushButton("Zoom +")
-        self.zoom_out_btn = QPushButton("Zoom -")
+        self.zoom_in_btn = QPushButton("🔍 Zoom +")
+        self.zoom_out_btn = QPushButton("🔍 Zoom -")
 
         for btn in [self.prev_btn, self.next_btn, self.zoom_in_btn, self.zoom_out_btn]:
             btn.setStyleSheet("""
                 QPushButton {
-                    background-color: #f0f0f0;
-                    border: 1px solid #ddd;
-                    padding: 5px 10px;
-                    border-radius: 4px;
-                    min-width: 60px;
+                    background-color: #6c757d;
+                    color: white;
                 }
                 QPushButton:hover {
-                    background-color: #e0e0e0;
+                    background-color: #545b62;
                 }
             """)
 
@@ -116,10 +155,10 @@ class VerificationView(QWidget):
 
         # Image display
         self.scroll_area = QScrollArea()
-        self.scroll_area.setStyleSheet("background: #f0f0f0;")
         self.scroll_area.setWidgetResizable(True)
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setStyleSheet("background-color: white; border: 1px solid #dee2e6;")
         self.scroll_area.setWidget(self.image_label)
         viewer_layout.addWidget(self.scroll_area)
 
@@ -144,14 +183,11 @@ class VerificationView(QWidget):
         # Initial load
         self.load_data()
         self.viewer_panel.hide()
-        font = QFont()
-        font.setPointSize(11)  # Increased from default
-        self.setFont(font)
 
     def toggle_viewer(self):
         """Toggle image viewer visibility"""
         if not self.current_patient:
-            QMessageBox.warning(self, "Aucun patient", "Sélectionnez un patient d'abord")
+            QMessageBox.warning(self, "Aucun Patient", "Sélectionnez un patient d'abord")
             return
 
         self.image_viewer_visible = not self.image_viewer_visible
@@ -160,11 +196,11 @@ class VerificationView(QWidget):
             self.viewer_panel.show()
             self.main_splitter.setSizes([self.width() // 2, self.width() // 2])
             self.show_current_page()
-            self.toggle_btn.setText("Cacher visualisation")
+            self.toggle_btn.setText("📋 Cacher la Visualisation")
         else:
             self.viewer_panel.hide()
             self.main_splitter.setSizes([self.width(), 0])
-            self.toggle_btn.setText("Afficher visualisation")
+            self.toggle_btn.setText("📋 Afficher la Visualisation")
 
     def load_data(self):
         self.table.blockSignals(True)
@@ -174,9 +210,15 @@ class VerificationView(QWidget):
             if not self.project_data.get('extracted_data'):
                 return
 
-            # Setup headers
-            headers = ["Patient"] + [v['name'] if isinstance(v, dict) else str(v)
-                                     for v in self.project_data.get('variables', [])] + ["Erreurs"]
+            # Setup headers - maintain variable order from Variables View
+            variable_names = []
+            for v in self.project_data.get('variables', []):
+                if isinstance(v, dict):
+                    variable_names.append(v['name'])
+                else:
+                    variable_names.append(str(v))
+            
+            headers = ["Patient"] + variable_names + ["Erreurs"]
             self.table.setColumnCount(len(headers))
             self.table.setHorizontalHeaderLabels(headers)
 
@@ -185,11 +227,21 @@ class VerificationView(QWidget):
                 self.table.insertRow(row)
                 self.table.setItem(row, 0, QTableWidgetItem(patient_id))
 
-                for col, var in enumerate(self.project_data['variables'], start=1):
-                    value = str(data["data"]["variables"].get(var['name'] if isinstance(var, dict) else var, ""))
+                # Maintain variable order
+                for col, var_name in enumerate(variable_names, start=1):
+                    value = str(data["data"]["variables"].get(var_name, ""))
                     item = QTableWidgetItem(value)
-                    if '?' in value:
-                        item.setBackground(QColor(255, 200, 200))
+                    
+                    # Handle conflicts - show in red without "CONFLICT:" prefix
+                    if value.startswith("CONFLICT:"):
+                        conflict_values = value[9:]  # Remove "CONFLICT:" prefix
+                        item.setText(conflict_values)
+                        item.setForeground(QColor(220, 53, 69))  # Bootstrap danger red
+                        item.setToolTip("Conflit détecté: plusieurs valeurs trouvées")
+                    elif '?' in value:
+                        item.setBackground(QColor(255, 243, 205))  # Light warning yellow
+                        item.setToolTip("Valeur incertaine")
+                    
                     self.table.setItem(row, col, item)
 
                 errors = "\n".join(data["data"].get("errors", []))
@@ -264,11 +316,21 @@ class VerificationView(QWidget):
         """Handle data edits"""
         try:
             patient_id = self.table.item(row, 0).text()
-            var_name = self.table.horizontalHeaderItem(column).text()
+            if column > 0 and column < self.table.columnCount() - 1:  # Not patient or errors column
+                var_name = self.table.horizontalHeaderItem(column).text()
+            else:
+                return  # Don't save changes to patient ID or errors
+                
             new_value = self.table.item(row, column).text()
 
             if patient_id in self.project_data['extracted_data']:
                 self.project_data['extracted_data'][patient_id]["data"]["variables"][var_name] = new_value
+                
+                # Remove conflict formatting if user manually edits
+                item = self.table.item(row, column)
+                item.setForeground(QColor(0, 0, 0))  # Reset to black
+                item.setToolTip("")  # Clear tooltip
+                
                 self.save_callback()
         except Exception as e:
             print(f"Error saving change: {e}")

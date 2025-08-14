@@ -132,51 +132,62 @@ class MainWindow(QMainWindow):
     def apply_stylesheet(self):
         self.setStyleSheet("""
             QMainWindow {
-                background-color: #fcfcfc;
+                background-color: #f8f9fa;
+                font-family: 'Segoe UI', Arial, sans-serif;
             }
             QMenuBar {
-                background-color: #fcfcfc;
-                border-bottom: 1px solid #e0e0e0;
+                background-color: #ffffff;
+                border-bottom: 1px solid #dee2e6;
+                font-size: 11px;
             }
             QMenuBar::item {
-                padding: 6px 12px;
+                padding: 8px 16px;
+                border-radius: 4px;
+                margin: 2px;
             }
             QMenuBar::item:selected {
-                background-color: #e8e8e8;
-                border-radius: 4px;
+                background-color: #e3f2fd;
+                color: #1976d2;
             }
             QMenu {
                 background-color: #ffffff;
-                border: 1px solid #dcdcdc;
-                padding: 5px;
+                border: 2px solid #dee2e6;
+                border-radius: 8px;
+                padding: 8px;
             }
             QMenu::item {
-                padding: 6px 24px;
+                padding: 8px 16px;
+                border-radius: 4px;
+                margin: 1px;
             }
             QMenu::item:selected {
-                background-color: #f0f8ff; /* AliceBlue */
-                color: #000;
+                background-color: #e3f2fd;
+                color: #1976d2;
             }
             QStatusBar {
-                background: #fcfcfc;
-                border-top: 1px solid #e0e0e0;
+                background: #ffffff;
+                border-top: 1px solid #dee2e6;
+                color: #6c757d;
+                font-size: 10px;
             }
             QSplitter::handle {
-                background: #e0e0e0;
+                background: #dee2e6;
             }
             QSplitter::handle:horizontal {
-                width: 1px;
+                width: 2px;
             }
             QLabel {
-                color: #333;
+                color: #495057;
             }
             QMessageBox {
                 font-family: "Segoe UI";
-                font-size: 10pt;
+                font-size: 11px;
+                background-color: #ffffff;
             }
             QProgressDialog {
                 font-family: "Segoe UI";
-                font-size: 10pt;
+                font-size: 11px;
+                background-color: #ffffff;
             }
         """)
 
@@ -195,41 +206,51 @@ class MainWindow(QMainWindow):
         self.sidebar.setMinimumWidth(200)
         self.sidebar.setMaximumWidth(350)
         self.sidebar.setIconSize(QSize(24, 24))
-        self.sidebar.setFont(QtGui.QFont("Segoe UI", 11, QFont.Bold))
+        self.sidebar.setFont(QtGui.QFont("Segoe UI", 12, QFont.Medium))
 
         self.sidebar.setStyleSheet("""
             QListWidget {
-                background-color: #2c3e50;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #667eea, stop:1 #764ba2);
                 color: white;
                 border: none;
                 outline: 0;
+                border-radius: 0px;
             }
             QListWidget::item {
-                padding: 15px 20px;
-                border-bottom: 1px solid #34495e;
+                padding: 18px 24px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                font-weight: 500;
             }
             QListWidget::item:hover {
-                background-color: #34495e;
+                background-color: rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                margin: 2px 8px;
             }
             QListWidget::item:selected {
-                background-color: #3498db;
+                background-color: rgba(255, 255, 255, 0.2);
                 border-left: 4px solid #ffffff;
                 color: white;
+                border-radius: 8px;
+                margin: 2px 8px;
+                font-weight: 600;
             }
             QToolTip {
-                background-color: #34495e;
+                background-color: #495057;
                 color: white;
-                border: 1px solid #2c3e50;
-                padding: 4px;
+                border: 1px solid #6c757d;
+                padding: 8px;
+                border-radius: 4px;
+                font-size: 10px;
             }
         """)
 
         items = [
-            ("Projet", "icons/project.png", "Gérer les détails du projet"),
-            ("Documents", "icons/documents.png", "Visualiser et organiser les documents"),
-            ("Extraction", "icons/extraction.png", "Définir les variables et extraire les données"),
-            ("Vérification", "icons/verification.png", "Vérifier les données extraites"),
-            ("Exportation", "icons/export.png", "Exporter les résultats finaux")
+            ("📁 Projet", "icons/project.png", "Gérer les détails du projet"),
+            ("📄 Documents", "icons/documents.png", "Visualiser et organiser les documents"),
+            ("🔧 Variables", "icons/extraction.png", "Définir les variables et extraire les données"),
+            ("✅ Vérification", "icons/verification.png", "Vérifier les données extraites"),
+            ("📊 Exportation", "icons/export.png", "Exporter les résultats finaux")
         ]
 
         for text, icon_path, tooltip in items:
@@ -247,11 +268,81 @@ class MainWindow(QMainWindow):
         # Vue Projet
         project_view = QWidget()
         project_layout = QVBoxLayout(project_view)
+        project_layout.setContentsMargins(40, 40, 40, 40)
         project_layout.setAlignment(Qt.AlignCenter)
-        self.project_label = QLabel("Vue Projet - Aucun projet chargé")
-        self.project_label.setFont(QtGui.QFont("Segoe UI", 14, QFont.Light))
-        self.project_label.setStyleSheet("color: #7f8c8d;")
+        
+        # Welcome section
+        welcome_frame = QFrame()
+        welcome_frame.setStyleSheet("""
+            QFrame {
+                background-color: white;
+                border-radius: 12px;
+                padding: 30px;
+                border: 1px solid #dee2e6;
+            }
+        """)
+        welcome_layout = QVBoxLayout(welcome_frame)
+        
+        welcome_title = QLabel("🚀 Bienvenue dans AutoQuest")
+        welcome_title.setFont(QtGui.QFont("Segoe UI", 20, QFont.Bold))
+        welcome_title.setStyleSheet("color: #495057; margin-bottom: 15px;")
+        welcome_title.setAlignment(Qt.AlignCenter)
+        welcome_layout.addWidget(welcome_title)
+        
+        self.project_label = QLabel("Aucun projet chargé")
+        self.project_label.setFont(QtGui.QFont("Segoe UI", 14, QFont.Normal))
+        self.project_label.setStyleSheet("color: #6c757d; margin-bottom: 20px;")
+        self.project_label.setAlignment(Qt.AlignCenter)
+        welcome_layout.addWidget(self.project_label)
+        
+        # Quick actions
+        actions_label = QLabel("Actions rapides:")
+        actions_label.setFont(QtGui.QFont("Segoe UI", 12, QFont.Medium))
+        actions_label.setStyleSheet("color: #495057; margin-bottom: 10px;")
+        welcome_layout.addWidget(actions_label)
+        
+        quick_actions = QHBoxLayout()
+        
+        new_btn = QPushButton("📁 Nouveau Projet")
+        new_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #28a745;
+                color: white;
+                padding: 12px 24px;
+                border-radius: 8px;
+                font-weight: 500;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #218838;
+                transform: translateY(-2px);
+            }
+        """)
+        new_btn.clicked.connect(self.safe_new_project)
+        
+        open_btn = QPushButton("📂 Ouvrir Projet")
+        open_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #007bff;
+                color: white;
+                padding: 12px 24px;
+                border-radius: 8px;
+                font-weight: 500;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #0056b3;
+                transform: translateY(-2px);
+            }
+        """)
+        open_btn.clicked.connect(self.safe_open_project)
+        
+        quick_actions.addWidget(new_btn)
+        quick_actions.addWidget(open_btn)
+        welcome_layout.addLayout(quick_actions)
+        
         project_layout.addWidget(self.project_label)
+        project_layout.addWidget(welcome_frame)
         self.central_widget.addWidget(project_view)
 
         # Vue Documents
@@ -269,11 +360,56 @@ class MainWindow(QMainWindow):
         # Vue Exportation
         export_view = QWidget()
         export_layout = QVBoxLayout(export_view)
+        export_layout.setContentsMargins(20, 20, 20, 20)
         export_layout.setAlignment(Qt.AlignCenter)
-        export_label = QLabel("Vue Exportation")
-        export_label.setFont(QtGui.QFont("Segoe UI", 14, QFont.Light))
-        export_label.setStyleSheet("color: #7f8c8d;")
+        
+        export_title = QLabel("📊 Exportation des Données")
+        export_title.setFont(QtGui.QFont("Segoe UI", 16, QFont.Bold))
+        export_title.setStyleSheet("color: #495057; margin-bottom: 20px;")
+        export_layout.addWidget(export_title)
+        
+        export_frame = QFrame()
+        export_frame.setStyleSheet("""
+            QFrame {
+                background-color: white;
+                border-radius: 12px;
+                padding: 30px;
+                border: 1px solid #dee2e6;
+            }
+        """)
+        export_frame_layout = QVBoxLayout(export_frame)
+        
+        export_label = QLabel("Exportez vos données extraites vers Excel")
+        export_label.setFont(QtGui.QFont("Segoe UI", 12, QFont.Normal))
+        export_label.setStyleSheet("color: #6c757d; margin-bottom: 20px;")
+        export_label.setAlignment(Qt.AlignCenter)
+        export_frame_layout.addWidget(export_label)
+        
+        self.export_btn_main = QPushButton("📊 Exporter vers Excel")
+        self.export_btn_main.setStyleSheet("""
+            QPushButton {
+                background-color: #28a745;
+                color: white;
+                padding: 15px 30px;
+                border-radius: 8px;
+                font-weight: 600;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #218838;
+                transform: translateY(-2px);
+            }
+            QPushButton:disabled {
+                background-color: #6c757d;
+                transform: none;
+            }
+        """)
+        self.export_btn_main.clicked.connect(self.safe_export_to_excel)
+        self.export_btn_main.setEnabled(False)
+        export_frame_layout.addWidget(self.export_btn_main, alignment=Qt.AlignCenter)
+        
         export_layout.addWidget(export_label)
+        export_layout.addWidget(export_frame)
         self.central_widget.addWidget(export_view)
 
     def create_menus(self):
@@ -315,9 +451,9 @@ class MainWindow(QMainWindow):
 
         self.scan_action = QAction(QtGui.QIcon("icons/scan.png"), "&Numériser un nouveau document...", self)
         self.scan_action.setShortcut("Ctrl+Shift+S")
-        self.scan_action.triggered.connect(self.scan_new)
+        # Removed scan functionality
         self.scan_action.setEnabled(False)
-        tools_menu.addAction(self.scan_action)
+        # tools_menu.addAction(self.scan_action)  # Commented out to remove from menu
 
         tools_menu.addSeparator()
 
@@ -407,7 +543,10 @@ class MainWindow(QMainWindow):
             self.extract_action.setEnabled(True)
             self.export_action.setEnabled(True)
 
-            self.project_label.setText(f"Projet : {os.path.basename(path)}")
+            # Update export button state
+            self.export_btn_main.setEnabled(True)
+            
+            self.project_label.setText(f"Projet chargé: {os.path.basename(path)}")
 
             self.documents_view.update_view(self.project_data)
             self.variables_view.update_view(self.project_data)
@@ -561,10 +700,6 @@ class MainWindow(QMainWindow):
         finally:
             progress.close()
             gc.collect()
-
-    def scan_new(self):
-        QMessageBox.information(self, "Non implémenté",
-                                "La numérisation directe n'est pas encore disponible dans cette version.")
 
     def safe_export_to_excel(self):
         if not self.project_path:

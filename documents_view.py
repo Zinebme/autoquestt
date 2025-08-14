@@ -12,54 +12,69 @@ class DocumentsView(QWidget):
 
     def initUI(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(15, 15, 15, 15)
-        layout.setSpacing(10)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(20)
 
-        title = QLabel("Imported Questionnaires:")
-        title.setStyleSheet("""
-            QLabel {
-                font-size: 14px;
-                font-weight: bold;
-                color: #333;
-                padding-bottom: 5px;
-                border-bottom: 1px solid #ddd;
+        # Apply modern styling
+        self.setStyleSheet("""
+            QWidget {
+                background-color: #f8f9fa;
+                font-family: 'Segoe UI', Arial, sans-serif;
             }
-        """)
-        layout.addWidget(title)
-
-        self.file_list = QListWidget()
-        self.file_list.setStyleSheet("""
+            QLabel {
+                color: #495057;
+            }
             QListWidget {
                 background-color: white;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                padding: 5px;
+                border: 2px solid #dee2e6;
+                border-radius: 8px;
+                padding: 10px;
+                font-size: 11px;
             }
             QListWidget::item {
-                padding: 8px;
-                border-bottom: 1px solid #eee;
+                padding: 12px;
+                border-bottom: 1px solid #f1f3f4;
+                border-radius: 6px;
+                margin: 2px 0;
             }
             QListWidget::item:hover {
-                background-color: #f0f0f0;
+                background-color: #f8f9fa;
             }
             QListWidget::item:selected {
-                background-color: #e1f0fa;
-                color: #0066cc;
+                background-color: #e3f2fd;
+                color: #1976d2;
             }
         """)
+
+        title = QLabel("📄 Questionnaires Importés")
+        title.setFont(QFont("Segoe UI", 16, QFont.Bold))
+        title.setStyleSheet("color: #495057; margin-bottom: 10px;")
+        layout.addWidget(title)
+        
+        # Info label
+        info_label = QLabel("Liste des dossiers patients organisés par questionnaire")
+        info_label.setStyleSheet("color: #6c757d; font-size: 11px; margin-bottom: 15px;")
+        layout.addWidget(info_label)
+
+        self.file_list = QListWidget()
         layout.addWidget(self.file_list)
         self.load_patient_folders()
-        font = QFont()
-        font.setPointSize(11)  # Increased from default
-        self.setFont(font)
 
     def load_patient_folders(self):
         self.file_list.clear()
         if self.project_data:
             questionnaires = self.project_data.get('compiled_questionnaires', [])
+            if not questionnaires:
+                # Add placeholder item
+                placeholder = QListWidgetItem("Aucun questionnaire importé")
+                placeholder.setFlags(placeholder.flags() & ~Qt.ItemIsSelectable)
+                self.file_list.addItem(placeholder)
+                return
+                
             for q in questionnaires:
                 patient_name = os.path.basename(q['patient_dir'])
-                self.file_list.addItem(patient_name)
+                item = QListWidgetItem(f"👤 {patient_name}")
+                self.file_list.addItem(item)
 
     def update_view(self, project_data):
         self.project_data = project_data
