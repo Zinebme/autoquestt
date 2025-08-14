@@ -179,10 +179,9 @@ def consolidate_group_results(model_output: dict, original_variables: List[Dict]
             if len(checked_options) == 1:
                 final_results[var_name] = checked_options[0]
             elif len(checked_options) > 1:
-                warning_msg = f"Conflit pour '{var_name}': Plusieurs options cochées détectées"
+                warning_msg = f"Conflit pour '{var_name}': Plusieurs options cochées détectées ({', '.join(checked_options)})"
                 warnings.append(warning_msg)
-                # Format conflicting values in red (will be handled by UI)
-                final_results[var_name] = f"CONFLICT:{','.join(checked_options)}"
+                final_results[var_name] = f"Conflit: {', '.join(checked_options)}"
             else:  # len(checked_options) == 0
                 final_results[var_name] = "Non renseigné"
         else:
