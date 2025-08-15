@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import (
     QLabel, QVBoxLayout, QPushButton, QScrollArea,
     QSplitter, QFrame, QSizePolicy, QMessageBox
 )
-from PyQt5.QtGui import QPixmap, QColor, QFont
+from PyQt5.QtGui import QPixmap, QColor, QFont, QIcon
 from PyQt5.QtCore import Qt, QRect, QPoint
 import os
 import re
@@ -21,89 +21,113 @@ class VerificationView(QWidget):
         self.image_viewer_visible = False
         self.initUI()
 
+    # verification_view.py (modifications dans initUI)
     def initUI(self):
         # Main splitter for resizable panels
         self.main_splitter = QSplitter(Qt.Horizontal)
-        self.main_splitter.setStyleSheet("QSplitter::handle { background: #ddd; }")
-
-        # Left panel - Table
-        self.table_panel = QFrame()
-        self.table_panel.setFrameShape(QFrame.StyledPanel)
-        table_layout = QVBoxLayout(self.table_panel)
-        table_layout.setContentsMargins(5, 5, 5, 5)
-        table_layout.setSpacing(10)
-
-        # Control button
-        self.toggle_btn = QPushButton("Show Visualization")
-        self.toggle_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #2196F3;
-                color: white;
-                border: none;
-                padding: 8px 15px;
-                border-radius: 4px;
-            }
-            QPushButton:hover {
-                background-color: #0b7dda;
+        self.main_splitter.setStyleSheet("""
+            QSplitter::handle {
+                background: #dcdcdc;
             }
         """)
+
+        # --- Left panel - Table ---
+        self.table_panel = QFrame()
+        self.table_panel.setFrameShape(QFrame.NoFrame)
+        table_layout = QVBoxLayout(self.table_panel)
+        table_layout.setContentsMargins(25, 25, 25, 25)
+        table_layout.setSpacing(15)
+
+        title = QLabel("Vérification des Données")
+        title.setFont(QFont("Segoe UI", 16, QFont.Bold))
+        title.setStyleSheet("color: #333333;")
+        table_layout.addWidget(title)
+
+        self.toggle_btn = QPushButton("Afficher la visualisation")
         self.toggle_btn.clicked.connect(self.toggle_viewer)
-        table_layout.addWidget(self.toggle_btn)
+        self.toggle_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #f1f3f4;
+                color: #3c4043;
+                border: 1px solid #dcdcdc;
+                padding: 8px 15px;
+                min-width: 180px;
+            }
+            QPushButton:hover {
+                background-color: #e8eaed;
+            }
+        """)
+        table_layout.addWidget(self.toggle_btn, alignment=Qt.AlignLeft)
 
         # Data table
         self.table = QTableWidget()
+        self.table.setEditTriggers(QTableWidget.AllEditTriggers)
         self.table.setStyleSheet("""
             QTableWidget {
-                background-color: white;
-                border: 1px solid #ddd;
-                gridline-color: #eee;
+                background-color: #ffffff;
+                border: 1px solid #dcdcdc;
+                border-radius: 8px;
+                font-size: 11pt;
+                gridline-color: #e8eaed;
+                color: #333333;
             }
             QHeaderView::section {
-                background-color: #f0f0f0;
-                padding: 5px;
-                border: 1px solid #ddd;
+                background-color: #f8f9fa;
+                padding: 12px;
+                border: 1px solid #dcdcdc;
+                font-weight: bold;
+                color: #333333;
             }
             QTableWidget::item {
-                padding: 5px;
+                padding: 10px;
+                color: #333333;
             }
             QTableWidget::item:selected {
-                background-color: #e1f0fa;
-                color: #0066cc;
+                background-color: #e8f0fe;
+                color: #1967d2;
             }
         """)
-        self.table.setEditTriggers(QTableWidget.AllEditTriggers)
         table_layout.addWidget(self.table)
 
-        # Right panel - Image Viewer
+        # --- Right panel - Image Viewer ---
         self.viewer_panel = QFrame()
-        self.viewer_panel.setFrameShape(QFrame.StyledPanel)
+        self.viewer_panel.setFrameShape(QFrame.NoFrame)
         viewer_layout = QVBoxLayout(self.viewer_panel)
-        viewer_layout.setContentsMargins(5, 5, 5, 5)
-        viewer_layout.setSpacing(10)
+        viewer_layout.setContentsMargins(25, 25, 25, 25)
+        viewer_layout.setSpacing(15)
+
+        viewer_title = QLabel("Visualisation du Document")
+        viewer_title.setFont(QFont("Segoe UI", 16, QFont.Bold))
+        viewer_title.setStyleSheet("color: #333333;")
+        viewer_layout.addWidget(viewer_title)
 
         # Viewer controls
         controls = QHBoxLayout()
         controls.setSpacing(10)
 
-        self.prev_btn = QPushButton("◀ Previous")
-        self.next_btn = QPushButton("Next ▶")
-        self.page_label = QLabel("Page: -/-")
-        self.zoom_in_btn = QPushButton("Zoom +")
-        self.zoom_out_btn = QPushButton("Zoom -")
+        self.prev_btn = QPushButton("Précédent")
+        self.next_btn = QPushButton("Suivant")
+        self.page_label = QLabel("Page : -/-")
+        self.page_label.setStyleSheet("color: #333333;")
+        self.zoom_in_btn = QPushButton("+")
+        self.zoom_out_btn = QPushButton("-")
 
-        for btn in [self.prev_btn, self.next_btn, self.zoom_in_btn, self.zoom_out_btn]:
-            btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #f0f0f0;
-                    border: 1px solid #ddd;
-                    padding: 5px 10px;
-                    border-radius: 4px;
-                    min-width: 60px;
-                }
-                QPushButton:hover {
-                    background-color: #e0e0e0;
-                }
-            """)
+        button_style = """
+            QPushButton {
+                background-color: #f1f3f4;
+                color: #3c4043;
+                border: 1px solid #dcdcdc;
+                padding: 8px 12px;
+                min-width: 80px;
+            }
+            QPushButton:hover {
+                background-color: #e8eaed;
+            }
+        """
+        self.prev_btn.setStyleSheet(button_style)
+        self.next_btn.setStyleSheet(button_style)
+        self.zoom_in_btn.setStyleSheet(button_style + "min-width: 40px;")
+        self.zoom_out_btn.setStyleSheet(button_style + "min-width: 40px;")
 
         controls.addWidget(self.prev_btn)
         controls.addWidget(self.page_label)
@@ -111,25 +135,32 @@ class VerificationView(QWidget):
         controls.addStretch()
         controls.addWidget(self.zoom_out_btn)
         controls.addWidget(self.zoom_in_btn)
-
         viewer_layout.addLayout(controls)
 
         # Image display
         self.scroll_area = QScrollArea()
-        self.scroll_area.setStyleSheet("background: #f0f0f0;")
         self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setStyleSheet("""
+            QScrollArea {
+                border: 1px solid #dcdcdc;
+                border-radius: 8px;
+                background-color: #ffffff;
+            }
+        """)
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setStyleSheet("background-color: #ffffff; padding: 10px;")
         self.scroll_area.setWidget(self.image_label)
         viewer_layout.addWidget(self.scroll_area)
 
-        # Add panels to splitter
+        # --- Main Layout Setup ---
         self.main_splitter.addWidget(self.table_panel)
         self.main_splitter.addWidget(self.viewer_panel)
-        self.main_splitter.setSizes([self.width(), 0])  # Start with viewer hidden
+        self.main_splitter.setSizes([self.width(), 0])
+        self.viewer_panel.hide()
 
-        # Main layout
         main_layout = QHBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.addWidget(self.main_splitter)
         self.setLayout(main_layout)
 
@@ -141,17 +172,12 @@ class VerificationView(QWidget):
         self.zoom_out_btn.clicked.connect(self.zoom_out)
         self.table.cellChanged.connect(self.on_cell_changed)
 
-        # Initial load
         self.load_data()
-        self.viewer_panel.hide()
-        font = QFont()
-        font.setPointSize(11)  # Increased from default
-        self.setFont(font)
 
     def toggle_viewer(self):
         """Toggle image viewer visibility"""
-        if not self.current_patient:
-            QMessageBox.warning(self, "Aucun patient", "Sélectionnez un patient d'abord")
+        if self.table.currentRow() < 0 and not self.current_patient:
+            CustomMessageBox.warning(self, "Aucune sélection", "Veuillez sélectionner un patient dans le tableau.")
             return
 
         self.image_viewer_visible = not self.image_viewer_visible
@@ -159,12 +185,15 @@ class VerificationView(QWidget):
         if self.image_viewer_visible:
             self.viewer_panel.show()
             self.main_splitter.setSizes([self.width() // 2, self.width() // 2])
-            self.show_current_page()
-            self.toggle_btn.setText("Cacher visualisation")
+            if self.current_patient:
+                self.show_current_page()
+            self.toggle_btn.setText("Masquer la visualisation")
+            self.toggle_btn.setIcon(QIcon("icons/visibility_off.png"))
         else:
             self.viewer_panel.hide()
             self.main_splitter.setSizes([self.width(), 0])
-            self.toggle_btn.setText("Afficher visualisation")
+            self.toggle_btn.setText("Afficher la visualisation")
+            self.toggle_btn.setIcon(QIcon("icons/visibility.png"))
 
     def load_data(self):
         self.table.blockSignals(True)
@@ -189,7 +218,7 @@ class VerificationView(QWidget):
                     value = str(data["data"]["variables"].get(var['name'] if isinstance(var, dict) else var, ""))
                     item = QTableWidgetItem(value)
                     if '?' in value:
-                        item.setBackground(QColor(255, 200, 200))
+                        item.setBackground(QColor("#fce8e6")) # Soft red for attention
                     self.table.setItem(row, col, item)
 
                 errors = "\n".join(data["data"].get("errors", []))
