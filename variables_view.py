@@ -1,10 +1,64 @@
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QListWidget, QLineEdit,
+    QApplication, QWidget, QVBoxLayout, QListWidget, QLineEdit,
     QPushButton, QHBoxLayout, QLabel, QMessageBox,
     QDialog, QComboBox, QFormLayout, QDialogButtonBox,
     QListWidgetItem
 )
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont, QIcon
+from ocr import detect_variables_from_image_folder
+from main import CustomMessageBox
+
+
+class VariableSelectionDialog(QDialog):
+    def __init__(self, variables, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Select Variables to Add")
+        self.setMinimumWidth(500)
+        self.setMinimumHeight(600)
+        self.setStyleSheet("background-color: #ffffff;")
+
+        self.layout = QVBoxLayout(self)
+
+        controls_layout = QHBoxLayout()
+        select_all_btn = QPushButton("Select All")
+        deselect_all_btn = QPushButton("Deselect All")
+        controls_layout.addWidget(select_all_btn)
+        controls_layout.addWidget(deselect_all_btn)
+        controls_layout.addStretch()
+        self.layout.addLayout(controls_layout)
+
+        self.list_widget = QListWidget()
+        for var in variables:
+            item = QListWidgetItem(var)
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            item.setCheckState(Qt.Unchecked)
+            self.list_widget.addItem(item)
+        self.layout.addWidget(self.list_widget)
+
+        select_all_btn.clicked.connect(self.select_all)
+        deselect_all_btn.clicked.connect(self.deselect_all)
+
+        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        self.layout.addWidget(self.button_box)
+
+    def select_all(self):
+        for i in range(self.list_widget.count()):
+            self.list_widget.item(i).setCheckState(Qt.Checked)
+
+    def deselect_all(self):
+        for i in range(self.list_widget.count()):
+            self.list_widget.item(i).setCheckState(Qt.Unchecked)
+
+    def get_selected_variables(self):
+        selected = []
+        for i in range(self.list_widget.count()):
+            item = self.list_widget.item(i)
+            if item.checkState() == Qt.Checked:
+                selected.append(item.text())
+        return selected
 
 
 class VariableEditDialog(QDialog):
@@ -15,8 +69,38 @@ class VariableEditDialog(QDialog):
     def __init__(self, parent=None, variable=None):
         super().__init__(parent)
         self.setWindowTitle("Éditer la Variable")
+        self.setMinimumWidth(450)
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #f8f9fa;
+            }
+            QLabel {
+                font-size: 11pt;
+                padding-bottom: 5px;
+            }
+            QLineEdit, QComboBox {
+                background-color: #ffffff;
+                border: 1px solid #dcdcdc;
+                border-radius: 4px;
+                padding: 8px;
+                font-size: 11pt;
+            }
+            QLineEdit:focus, QComboBox:focus {
+                border-color: #1a73e8;
+            }
+            QComboBox::drop-down {
+                border: none;
+            }
+            QComboBox::down-arrow {
+                /* image: url(icons/down_arrow.png); */
+                width: 12px;
+                height: 12px;
+            }
+        """)
 
         self.layout = QFormLayout(self)
+        self.layout.setSpacing(15)
+        self.layout.setContentsMargins(20, 20, 20, 20)
 
         self.name_input = QLineEdit()
         self.type_combo = QComboBox()
@@ -30,7 +114,6 @@ class VariableEditDialog(QDialog):
 
         self.type_combo.currentIndexChanged.connect(self.update_options_visibility)
 
-        # Set initial data if editing an existing variable
         if variable:
             self.name_input.setText(variable.get('name', ''))
             var_type = variable.get('type', 'text')
@@ -45,6 +128,26 @@ class VariableEditDialog(QDialog):
         self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
+
+        ok_button = self.button_box.button(QDialogButtonBox.Ok)
+        ok_button.setText("Enregistrer")
+        ok_button.setStyleSheet("""
+            QPushButton {
+                background-color: #1a73e8; color: white; font-weight: bold;
+                border-radius: 4px; padding: 10px 20px;
+            }
+            QPushButton:hover { background-color: #287ae6; }
+        """)
+        cancel_button = self.button_box.button(QDialogButtonBox.Cancel)
+        cancel_button.setText("Annuler")
+        cancel_button.setStyleSheet("""
+            QPushButton {
+                background-color: #f1f3f4; color: #3c4043;
+                border: 1px solid #dcdcdc; font-weight: normal;
+                border-radius: 4px; padding: 10px 20px;
+            }
+            QPushButton:hover { background-color: #e8eaed; }
+        """)
 
         self.layout.addWidget(self.button_box)
 
@@ -77,16 +180,69 @@ class VariablesView(QWidget):
         self.extract_callback = extract_callback
         self.initUI()
 
+    # variables_view.py (modifications dans initUI)
     def initUI(self):
         layout = QVBoxLayout(self)
-        title = QLabel("Définir les variables à extraire:")
+        layout.setContentsMargins(25, 25, 25, 25)
+        layout.setSpacing(15)
+
+        title = QLabel("Définition des Variables")
+        title.setFont(QFont("Segoe UI", 16, QFont.Bold))
+        title.setStyleSheet("color: #333333; padding-bottom: 5px;")
         layout.addWidget(title)
 
         self.list_widget = QListWidget()
+        self.list_widget.setStyleSheet("""
+            QListWidget {
+                background-color: #ffffff;
+                border: 1px solid #dcdcdc;
+                border-radius: 8px;
+                padding: 10px;
+                font-size: 11pt;
+                color: #333333;
+            }
+            QListWidget::item {
+                padding: 12px 15px;
+                border-radius: 4px;
+                margin-bottom: 5px;
+                color: #333333;
+            }
+            QListWidget::item:hover {
+                background-color: #f8f9fa;
+            }
+            QListWidget::item:selected {
+                background-color: #e8f0fe;
+                color: #1967d2;
+                font-weight: bold;
+            }
+        """)
         layout.addWidget(self.list_widget)
 
-        btn_layout = QHBoxLayout()
-        self.add_btn = QPushButton("Ajouter une variable")
+        # Buttons layout
+        buttons_layout = QHBoxLayout()
+        buttons_layout.setSpacing(10)
+
+        self.detect_btn = QPushButton("Auto-détection")
+        self.detect_btn.clicked.connect(self.auto_detect_variables)
+        self.detect_btn.setStyleSheet("""
+            background-color: #28a745;
+            color: white;
+            min-width: 120px;
+        """)
+
+        self.extract_btn = QPushButton("Lancer l'extraction")
+        self.extract_btn.clicked.connect(self.extract_callback)
+        self.extract_btn.setStyleSheet("""
+            background-color: #1a73e8;
+            color: white;
+            min-width: 120px;
+        """)
+
+        buttons_layout.addWidget(self.detect_btn)
+        buttons_layout.addWidget(self.extract_btn)
+        buttons_layout.addStretch()
+
+        self.add_btn = QPushButton("Ajouter")
         self.edit_btn = QPushButton("Modifier")
         self.remove_btn = QPushButton("Supprimer")
 
@@ -94,14 +250,29 @@ class VariablesView(QWidget):
         self.edit_btn.clicked.connect(self.edit_variable)
         self.remove_btn.clicked.connect(self.remove_variable)
 
-        btn_layout.addWidget(self.add_btn)
-        btn_layout.addWidget(self.edit_btn)
-        btn_layout.addWidget(self.remove_btn)
-        layout.addLayout(btn_layout)
+        self.add_btn.setStyleSheet("""
+            background-color: #1a73e8;
+            color: white;
+            min-width: 80px;
+        """)
+        self.edit_btn.setStyleSheet("""
+            background-color: #f1f3f4;
+            color: #3c4043;
+            border: 1px solid #dcdcdc;
+            min-width: 80px;
+        """)
+        self.remove_btn.setStyleSheet("""
+            background-color: #fce8e6;
+            color: #c5221f;
+            border: 1px solid #f9aba8;
+            min-width: 80px;
+        """)
 
-        self.extract_btn = QPushButton("Lancer l'extraction des données")
-        self.extract_btn.clicked.connect(self.extract_callback)
-        layout.addWidget(self.extract_btn)
+        buttons_layout.addWidget(self.add_btn)
+        buttons_layout.addWidget(self.edit_btn)
+        buttons_layout.addWidget(self.remove_btn)
+
+        layout.addLayout(buttons_layout)
 
         self.load_variables()
 
@@ -123,14 +294,14 @@ class VariablesView(QWidget):
         if dialog.exec_():
             data = dialog.get_data()
             if not data:
-                QMessageBox.warning(self, "Invalide",
+                CustomMessageBox.warning(self, "Invalide",
                                     "Le nom de la variable ne peut pas être vide, et un groupe doit avoir des options.")
                 return
 
             # Check for duplicates
             existing_names = [v['name'] for v in self.project_data.get('variables', [])]
             if data['name'] in existing_names:
-                QMessageBox.warning(self, "Dupliqué", f"La variable '{data['name']}' existe déjà.")
+                CustomMessageBox.warning(self, "Dupliqué", f"La variable '{data['name']}' existe déjà.")
                 return
 
             if 'variables' not in self.project_data:
@@ -143,7 +314,11 @@ class VariablesView(QWidget):
     def edit_variable(self):
         selected = self.list_widget.currentItem()
         if not selected:
-            QMessageBox.warning(self, "Aucune sélection", "Veuillez sélectionner une variable à modifier.")
+            msg = CustomMessageBox(self)
+            msg.setWindowTitle("Aucune sélection")
+            msg.setText("Veuillez sélectionner une variable à modifier.")
+            msg.setIcon(CustomMessageBox.Warning)
+            msg.exec_()
             return
 
         row = self.list_widget.row(selected)
@@ -153,15 +328,22 @@ class VariablesView(QWidget):
         if dialog.exec_():
             data = dialog.get_data()
             if not data:
-                QMessageBox.warning(self, "Invalide",
-                                    "Le nom de la variable ne peut pas être vide, et un groupe doit avoir des options.")
+                msg = CustomMessageBox(self)
+                msg.setWindowTitle("Invalide")
+                msg.setText("Le nom de la variable ne peut pas être vide, et un groupe doit avoir des options.")
+                msg.setIcon(CustomMessageBox.Warning)
+                msg.exec_()
                 return
 
             # Check for duplicates if name changed
             if data['name'] != current_var['name']:
                 existing_names = [v['name'] for i, v in enumerate(self.project_data['variables']) if i != row]
                 if data['name'] in existing_names:
-                    QMessageBox.warning(self, "Dupliqué", f"La variable '{data['name']}' existe déjà.")
+                    msg = CustomMessageBox(self)
+                    msg.setWindowTitle("Dupliqué")
+                    msg.setText(f"La variable '{data['name']}' existe déjà.")
+                    msg.setIcon(CustomMessageBox.Warning)
+                    msg.exec_()
                     return
 
             self.project_data['variables'][row] = data
@@ -171,18 +353,58 @@ class VariablesView(QWidget):
     def remove_variable(self):
         selected = self.list_widget.currentItem()
         if not selected:
-            QMessageBox.warning(self, "Aucune sélection", "Veuillez sélectionner une variable à supprimer.")
+            CustomMessageBox.warning(self, "Aucune sélection", "Veuillez sélectionner une variable à supprimer.")
             return
 
-        reply = QMessageBox.question(self, 'Confirmer la suppression',
+        reply = CustomMessageBox.question(self, 'Confirmer la suppression',
                                      f'Êtes-vous sûr de vouloir supprimer la variable "{selected.text()}"?',
-                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                                     CustomMessageBox.Yes | CustomMessageBox.No, CustomMessageBox.No)
 
-        if reply == QMessageBox.Yes:
+        if reply == CustomMessageBox.Yes:
             row = self.list_widget.row(selected)
             del self.project_data['variables'][row]
             self.list_widget.takeItem(row)
             self.save_callback()
+
+    def auto_detect_variables(self):
+        source_dir = self.project_data.get('scans_source_dir')
+        if not source_dir:
+            CustomMessageBox.warning(self, "Dossier source manquant",
+                                "Veuillez d'abord importer des scans avant de lancer la détection.")
+            return
+
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            result = detect_variables_from_image_folder(source_dir)
+        finally:
+            QApplication.restoreOverrideCursor()
+
+        if result.get("errors"):
+            CustomMessageBox.critical(self, "Erreur de Détection", "\n".join(result["errors"]))
+            return
+
+        if not result.get("variables"):
+            CustomMessageBox.information(self, "Aucune Variable Trouvée",
+                                    "Aucune variable n'a pu être détectée dans les documents.")
+            return
+
+        existing_vars = {v['name'] for v in self.project_data.get('variables', [])}
+        new_vars = [v for v in result["variables"] if v not in existing_vars]
+
+        if not new_vars:
+            CustomMessageBox.information(self, "Aucune Nouvelle Variable",
+                                    "L'auto-détection n'a trouvé aucune variable qui ne soit pas déjà dans votre liste.")
+            return
+
+        dialog = VariableSelectionDialog(new_vars, self)
+        if dialog.exec_():
+            selected_vars = dialog.get_selected_variables()
+            if selected_vars:
+                for var_name in selected_vars:
+                    new_var_data = {"name": var_name, "type": "text", "options": []}
+                    self.project_data['variables'].append(new_var_data)
+                    self.list_widget.addItem(var_name)
+                self.save_callback()
 
     def update_view(self, project_data):
         self.project_data = project_data
