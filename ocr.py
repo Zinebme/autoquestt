@@ -18,7 +18,7 @@ MAX_RETRIES = 3
 RETRY_DELAY = 5  # seconds
 
 # API Configuration
-RUNPOD_ENDPOINT = "https://j2f951zim1kgdh-8000.proxy.runpod.net/generate"
+RUNPOD_ENDPOINT = "https://agife168gwyih8-8000.proxy.runpod.net/generate"
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
