@@ -9,8 +9,9 @@ from PyQt5.QtWidgets import (
     QHBoxLayout, QAction, QToolBar, QStatusBar,
     QListWidget, QListWidgetItem, QStackedWidget,
     QLabel, QFileDialog, QMessageBox, QInputDialog,
-    QProgressDialog, QSplitter
+    QProgressDialog, QSplitter, QPushButton
 )
+from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QTextEdit, QDialogButtonBox)
 from PyQt5 import QtGui
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QSize, Qt, QTimer
@@ -402,6 +403,110 @@ class MainWindow(QMainWindow):
         self.export_action.setEnabled(False)
         tools_menu.addAction(self.export_action)
 
+        help_menu = menu_bar.addMenu("&Aide")
+
+        help_action = QAction("&Guide d'utilisation", self)
+        help_action.triggered.connect(self.show_help)
+        help_menu.addAction(help_action)
+
+    def show_help(self):
+        """Affiche le guide d'utilisation dans une fenêtre redimensionnable"""
+        try:
+            help_text = """
+            <style>
+                h1 { color: #1a73e8; font-size: 18pt; }
+                h2 { color: #1a73e8; font-size: 14pt; margin-top: 12px; }
+                body { font-family: "Segoe UI"; font-size: 11pt; }
+                ul { margin-left: 20px; }
+                li { margin-bottom: 6px; }
+            </style>
+            <h1>Guide d'utilisation d'AutoQuest</h1>
+            <h2>1. Création/Ouverture d'un projet</h2>
+            <p><b>Nouveau Projet</b> : Créez un nouveau projet en spécifiant un dossier parent et un nom de projet.</p>
+            <p><b>Ouvrir Projet</b> : Charge un projet existant à partir de son dossier.</p>
+
+            <h2>2. Importation des scans</h2>
+            <p>Utilisez <b>Outils > Importer des Scans</b> pour :</p>
+            <ul>
+                <li>Sélectionner le dossier contenant les images des questionnaires</li>
+                <li>Spécifier le nombre de pages par questionnaire</li>
+            </ul>
+            <p>Les documents seront organisés en dossiers patients automatiquement.</p>
+
+            <h2>3. Définition des variables</h2>
+            <p>Dans l'onglet <b>Extraction</b> :</p>
+            <ul>
+                <li><b>Auto-détection</b> : L'application analyse un questionnaire pour suggérer des variables</li>
+                <li><b>Ajouter/Modifier</b> : Définissez manuellement les variables à extraire</li>
+                <li>Pour les cases à cocher, créez une variable de type "groupe" avec les options possibles</li>
+            </ul>
+
+            <h2>4. Extraction des données</h2>
+            <p>Cliquez sur <b>Lancer l'extraction</b> pour :</p>
+            <ul>
+                <li>Extraire les valeurs pour toutes les variables définies</li>
+                <li>Les résultats apparaissent dans l'onglet Vérification</li>
+            </ul>
+
+            <h2>5. Vérification et correction</h2>
+            <p>Dans l'onglet <b>Vérification</b> :</p>
+            <ul>
+                <li>Visualisez les données extraites dans un tableau</li>
+                <li>Cliquez sur un patient pour voir le document original</li>
+                <li>Corrigez directement les valeurs si nécessaire</li>
+                <li>Utilisez les boutons de zoom et navigation pour inspecter le document</li>
+            </ul>
+
+            <h2>6. Exportation des résultats</h2>
+            <p>Utilisez <b>Outils > Exporter vers Excel</b> pour sauvegarder les données dans un fichier Excel.</p>
+
+            <h2>Conseils</h2>
+            <ul>
+                <li>Sauvegardez régulièrement votre projet (Ctrl+S)</li>
+                <li>Pour les documents multipages, vérifiez que toutes les pages sont bien importées</li>
+                <li>Les variables avec valeurs douteuses sont marquées en orange</li>
+            </ul>
+            """
+
+            help_dialog = QDialog(self)
+            help_dialog.setWindowTitle("Aide - Guide d'utilisation")
+            help_dialog.setWindowFlags(help_dialog.windowFlags() | Qt.WindowMinMaxButtonsHint)
+            help_dialog.resize(900, 700)  # Taille initiale plus grande
+
+            layout = QVBoxLayout(help_dialog)
+
+            text_edit = QTextEdit()
+            text_edit.setReadOnly(True)
+            text_edit.setHtml(help_text)
+
+            # Utilisez la même police que votre application
+            font = QFont("Segoe UI", 11)  # Police et taille comme dans votre app
+            text_edit.setFont(font)
+
+            # Barre de défilement toujours visible
+            text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+
+            # Bouton Fermer
+            btn_fermer = QPushButton("Fermer")
+            btn_fermer.clicked.connect(help_dialog.close)
+            btn_fermer.setStyleSheet("""
+                QPushButton {
+                    background-color: #1a73e8;
+                    color: white;
+                    padding: 8px 16px;
+                    min-width: 100px;
+                }
+            """)
+
+            layout.addWidget(text_edit)
+            layout.addWidget(btn_fermer, alignment=Qt.AlignCenter)
+
+            help_dialog.exec_()
+
+        except Exception as e:
+            print(f"Erreur lors de l'affichage de l'aide: {str(e)}")
+            QMessageBox.critical(self, "Erreur", f"Impossible d'afficher l'aide:\n{str(e)}")
+
     def change_view(self, index):
         self.central_widget.setCurrentIndex(index)
         # Update sidebar selection style
@@ -710,6 +815,7 @@ class MainWindow(QMainWindow):
             event.accept()
         else:
             event.ignore()
+
 
 
 if __name__ == "__main__":
