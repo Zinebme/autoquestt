@@ -1,3 +1,4 @@
+import os
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QListWidget, QLineEdit,
     QPushButton, QHBoxLayout, QLabel, QMessageBox,
@@ -16,7 +17,40 @@ class VariableSelectionDialog(QDialog):
         self.setWindowTitle("Select Variables to Add")
         self.setMinimumWidth(500)
         self.setMinimumHeight(600)
-        self.setStyleSheet("background-color: #ffffff;")
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #ffffff;
+                color: #333333;
+                font-family: "Segoe UI";
+                font-size: 11pt;
+            }
+            QListWidget {
+                background-color: #ffffff;
+                border: 1px solid #dcdcdc;
+                border-radius: 4px;
+                color: #333333;
+            }
+            QListWidget::item {
+                padding: 8px 12px;
+                border-bottom: 1px solid #f0f0f0;
+            }
+            QListWidget::item:hover {
+                background-color: #f5f5f5;
+            }
+            QListWidget::item:checked {
+                color: #1a73e8;
+            }
+            QPushButton {
+                background-color: #1a73e8;
+                color: white;
+                padding: 8px 16px;
+                border-radius: 4px;
+                min-width: 100px;
+            }
+            QPushButton:hover {
+                background-color: #287ae6;
+            }
+        """)
 
         self.layout = QVBoxLayout(self)
 
@@ -60,96 +94,6 @@ class VariableSelectionDialog(QDialog):
                 selected.append(item.text())
         return selected
 
-
-class VariableEditDialog(QDialog):
-    """
-    A custom dialog to add or edit a variable with its type and options.
-    """
-
-    def __init__(self, parent=None, variable=None):
-        super().__init__(parent)
-        self.setWindowTitle("Éditer la Variable")
-        self.setMinimumWidth(450)
-        self.setStyleSheet("""
-            QDialog {
-                background-color: #f8f9fa;
-            }
-            QLabel {
-                font-size: 11pt;
-                padding-bottom: 5px;
-            }
-            QLineEdit, QComboBox {
-                background-color: #ffffff;
-                border: 1px solid #dcdcdc;
-                border-radius: 4px;
-                padding: 8px;
-                font-size: 11pt;
-            }
-            QLineEdit:focus, QComboBox:focus {
-                border-color: #1a73e8;
-            }
-            QComboBox::drop-down {
-                border: none;
-            }
-            QComboBox::down-arrow {
-                /* image: url(icons/down_arrow.png); */
-                width: 12px;
-                height: 12px;
-            }
-        """)
-
-        self.layout = QFormLayout(self)
-        self.layout.setSpacing(15)
-        self.layout.setContentsMargins(20, 20, 20, 20)
-
-        self.name_input = QLineEdit()
-        self.type_combo = QComboBox()
-        self.options_input = QLineEdit()
-
-        self.type_combo.addItems(["Texte / Case unique", "Groupe de Choix Exclusifs"])
-
-        self.layout.addRow("Nom de la variable:", self.name_input)
-        self.layout.addRow("Type:", self.type_combo)
-        self.layout.addRow("Options (séparées par virgule):", self.options_input)
-
-        self.type_combo.currentIndexChanged.connect(self.update_options_visibility)
-
-        if variable:
-            self.name_input.setText(variable.get('name', ''))
-            var_type = variable.get('type', 'text')
-            if var_type == 'group':
-                self.type_combo.setCurrentIndex(1)
-                self.options_input.setText(", ".join(variable.get('options', [])))
-            else:
-                self.type_combo.setCurrentIndex(0)
-
-        self.update_options_visibility()
-
-        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        self.button_box.accepted.connect(self.accept)
-        self.button_box.rejected.connect(self.reject)
-
-        ok_button = self.button_box.button(QDialogButtonBox.Ok)
-        ok_button.setText("Enregistrer")
-        ok_button.setStyleSheet("""
-            QPushButton {
-                background-color: #1a73e8; color: white; font-weight: bold;
-                border-radius: 4px; padding: 10px 20px;
-            }
-            QPushButton:hover { background-color: #287ae6; }
-        """)
-        cancel_button = self.button_box.button(QDialogButtonBox.Cancel)
-        cancel_button.setText("Annuler")
-        cancel_button.setStyleSheet("""
-            QPushButton {
-                background-color: #f1f3f4; color: #3c4043;
-                border: 1px solid #dcdcdc; font-weight: normal;
-                border-radius: 4px; padding: 10px 20px;
-            }
-            QPushButton:hover { background-color: #e8eaed; }
-        """)
-
-        self.layout.addWidget(self.button_box)
 
     def update_options_visibility(self):
         is_group = self.type_combo.currentIndex() == 1
@@ -367,15 +311,25 @@ class VariablesView(QWidget):
             self.save_callback()
 
     def auto_detect_variables(self):
-        source_dir = self.project_data.get('scans_source_dir')
-        if not source_dir:
-            CustomMessageBox.warning(self, "Dossier source manquant",
-                                "Veuillez d'abord importer des scans avant de lancer la détection.")
+        # The source for variable detection should be a sample patient folder, not the main scan folder.
+        # We use the first patient folder as a representative sample.
+        patient_questionnaires = self.project_data.get('compiled_questionnaires')
+        if not patient_questionnaires:
+            CustomMessageBox.warning(self, "Dossiers patient manquants",
+                                "Veuillez d'abord importer et organiser les scans (via le menu Outils) avant de lancer la détection.")
             return
+
+        # Use the first patient's directory as the sample for detection
+        sample_patient_dir = patient_questionnaires[0].get('patient_dir')
+        if not sample_patient_dir or not os.path.exists(sample_patient_dir):
+             CustomMessageBox.warning(self, "Dossier patient non trouvé",
+                                f"Le dossier pour le premier patient ('{sample_patient_dir}') est introuvable. Veuillez réimporter les scans.")
+             return
 
         QApplication.setOverrideCursor(Qt.WaitCursor)
         try:
-            result = detect_variables_from_image_folder(source_dir)
+            # Call detection on the specific sample patient directory
+            result = detect_variables_from_image_folder(sample_patient_dir)
         finally:
             QApplication.restoreOverrideCursor()
 
