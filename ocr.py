@@ -18,7 +18,7 @@ MAX_RETRIES = 3
 RETRY_DELAY = 5  # seconds
 
 # API Configuration
-RUNPOD_ENDPOINT = "https://qecuv8e6lstlbt-8000.proxy.runpod.net/generate"
+RUNPOD_ENDPOINT = "https://c43y94kifocpf5-8000.proxy.runpod.net/generate"
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
@@ -101,19 +101,32 @@ def call_vision_model_for_json(image_b64: str, variables_to_extract: List[str]) 
     json_example_keys = {key: "valeur..." for key in variables_to_extract}
 
     prompt = f"""Tu es un expert en extraction de données sur des formulaires médicaux.
-Analyse l'image fournie et extrais les informations pour les variables suivantes : {', '.join(variables_to_extract)}.
+    Analyse l'image fournie et extrais les informations pour les variables suivantes : {', '.join(variables_to_extract)}.
 
-**TACHE FINALE :**
-Ta réponse DOIT être un unique objet JSON valide.
-Les clés de l'objet JSON DOIVENT correspondre EXACTEMENT aux noms des variables demandées dans la liste.
-Pour chaque variable de la liste, trouve la valeur correspondante dans le document.
-- Si une case à cocher est cochée (symbole comme ☑, ✓, X, etc.), la valeur est "Oui".
-- Si une case à cocher est vide, la valeur est "Non".
-- Si une information textuelle n'est pas présente, la valeur doit être "Non renseigné" ou une chaîne vide.
+    **TÂCHE FINALE :**
+    Ta réponse DOIT être un unique objet JSON valide.
+    Les clés de l'objet JSON DOIVENT correspondre EXACTEMENT aux noms des variables demandées dans la liste.
+    Pour chaque variable de la liste, trouve la valeur correspondante dans le document.
 
-Voici un exemple de la structure JSON que tu dois retourner :
-```json
-{json.dumps(json_example_keys, indent=2, ensure_ascii=False)}
+    Règles d’interprétation :
+    - Si une case à cocher est cochée (☑, ✓, X, …), la valeur est "Oui".
+    - Si une case à cocher est vide, la valeur est "Non".
+    - Si une information textuelle n'est pas présente, la valeur doit être "Non renseigné" ou une chaîne vide.
+    - Si l’information est organisée en **tableau croisé avec lignes et colonnes** :
+      • Étape 1 – Numérote toutes les lignes (L1, L2, …) et toutes les colonnes (C1, C2, …).  
+      • Étape 2 – Associe chaque numéro de ligne et de colonne à son texte exact.  
+      • Étape 3 – Pour chaque ligne, ne conserve QUE les colonnes cochées.  
+      • Étape 4 – Dans la sortie finale, pour chaque ligne demandée dans la liste des variables, restitue un tableau contenant uniquement les intitulés exacts des colonnes cochées.  
+      • Si aucune colonne n’est cochée pour une ligne, restitue une liste vide `[]`.  
+      • Ne jamais renvoyer "Oui" ou "Non" dans ce cas : uniquement les intitulés des colonnes cochées.
+
+    ⚠️ Contraintes :
+    - Tu dois toujours restituer la structure JSON strictement valide sans aucun texte supplémentaire.
+    - Le JSON doit être directement exploitable sans parsing manuel.
+
+    Voici un exemple de structure JSON attendue :
+    ```json
+    {json.dumps(json_example_keys, indent=2, ensure_ascii=False)}    
 ```
 
 Ne retourne RIEN d'autre que l'objet JSON. Pas de texte explicatif, pas de markdown, juste le JSON.
